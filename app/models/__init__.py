@@ -1,0 +1,1 @@
+from .review_model import ReviewModel as Review
