@@ -1,7 +1,9 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, Session
+from dotenv import load_dotenv
+import os
 
-DATABASE_URL = "postgresql://admin:1234@localhost.postgres.db:5432/product_reviews?schema=public"
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 database = create_engine(DATABASE_URL)
 

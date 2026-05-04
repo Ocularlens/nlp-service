@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from app.models import Review
 from app.infra import init_db
 from sqlalchemy.orm import Session
+from app.repository import ReviewRepository
 from app.utils import logger
 
 review_router: APIRouter = APIRouter()
@@ -17,8 +18,10 @@ def analyze_review(request: Request,review: Review, db: Session = Depends(init_d
     print(request.state.request_id)  # log the request ID for tracing
     result = spacy_integ.analyze_string(review.text)
 
-    # reviews = db.get(Review, 1).all()
-
-    # logger.info(reviews)
-
+    ReviewRepository(db).create_review(
+        product="unknown",
+        review_text=review.text,
+        rating=0
+    )
+    
     return {"result": result}
