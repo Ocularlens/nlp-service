@@ -61,6 +61,7 @@ class SpacyInteg:
 
         return {
             "mood": mood,
+            "sentiment_score": scores["positive"] - scores["negative"],
             "positive_count": scores["positive"],
             "negative_count": scores["negative"],
             "signals": signals,

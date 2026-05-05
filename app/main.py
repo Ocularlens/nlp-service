@@ -3,10 +3,18 @@ from app.routes import review_router
 from app.utils import logger
 import uuid
 
-server = FastAPI()
+server = FastAPI(
+    title="Review Service",
+    description="A microservice for handling product reviews",
+    version="1.0.0"
+)
 
 @server.get("/health")
 def root():
+    '''Health check endpoint
+    Returns:
+        dict: A message indicating the service is healthy
+    '''
     logger.info("Health check endpoint called")
     return {"message": "Service is healthy!"}
 
