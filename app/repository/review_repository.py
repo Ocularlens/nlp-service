@@ -19,3 +19,6 @@ class ReviewRepository:
 
     def get_review_by_id(self, review_id: str) -> Review:
         return self.db_session.query(Review).filter(Review.review_id == review_id).first()
+    
+    def get_all_reviews(self):
+        return self.db_session.query(Review).all()
