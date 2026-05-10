@@ -12,17 +12,16 @@ spacy_integ = SpacyInteg()
     
 @review_router.post("/")
 @limiter.limit("30/minute")
-def analyze_review(request: Request,review: Review, db: Session = Depends(init_db)) -> ReviewResponse:
+def analyze_review(request: Request, review: Review, db: Session = Depends(init_db)) -> ReviewResponse:
     logger.info(f"{request.state.request_id} - Received review for analysis: {review.text} and product: {review.productName}")
     result = spacy_integ.analyze_string(review.text)
 
-    review = ReviewRepository(db).create_review(
+    review = ReviewRepository(db).create(
         product=review.productName,
         review_text=review.text,
         rating=result.get("sentiment_score", 0)
     )
-    logger.info(f"{request.state.request_id} - Review analyzed and stored: {review.review_id}")
-     
+  
     return {
         "message": "Review successfully analyzed and stored",
         "analysis_result": result,

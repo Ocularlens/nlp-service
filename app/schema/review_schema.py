@@ -15,4 +15,4 @@ class Review(BaseModel):
 class ReviewResponse(BaseModel):
     message: str
     analysis_result: dict
-    review_id: int
+    review_id: str
