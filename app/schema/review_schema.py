@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 
-class Review(BaseModel):
+class ReviewRequest(BaseModel):
     text: str = Field(min_length=3, max_length=120)
     productName: str = Field(min_length=1, max_length=64)
     

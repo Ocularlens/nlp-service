@@ -1,1 +1,1 @@
-from .review_schema import Review, ReviewResponse
+from .review_schema import ReviewRequest, ReviewResponse

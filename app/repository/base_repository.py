@@ -1,3 +1,4 @@
+from sqlalchemy import and_
 from sqlalchemy.orm import DeclarativeBase, Session
 
 class BaseRepository:
@@ -15,8 +16,30 @@ class BaseRepository:
     def get_by_id(self, id):
         return self.db.query(self.model).filter(self.model.id == id).first()
       
-    def get_all(self):
-        return self.db.query(self.model).all()
+    def get_all(self, sort_by=None, sort_order='asc', where=None, page=1, size=10):
+        query = self.db.query(self.model)
+        if sort_by:
+            if sort_order == 'desc':
+                query = query.order_by(getattr(self.model, sort_by).desc())
+            else:
+                query = query.order_by(getattr(self.model, sort_by).asc())
+        if where:
+            if isinstance(where, list):
+                query = query.filter(and_(*where))  # unpack list properly
+            else:
+                query = query.filter(where)
+                
+        total = query.count()  # Get total count before pagination    
+                
+        if page is not None and size is not None:
+            query = query.offset((page - 1) * size).limit(size)
+        return {
+            "totalPages": (total + size - 1) // size,  # Calculate total pages
+            "currentPage": page,
+            "pageSize": size,
+            "totalItems": total,
+            "items": query.all()
+        }
       
     def delete(self, id):
         instance = self.get_by_id(id)
