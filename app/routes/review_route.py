@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, Request, Query
-from app.services import SpacyInteg
+from app.services import SpacyInteg, Translator
 from app.models import Review
 from app.infra import init_db
 from sqlalchemy.orm import Session
@@ -9,11 +9,16 @@ from app.schema import ReviewRequest, ReviewResponse
 
 review_router: APIRouter = APIRouter()
 spacy_integ = SpacyInteg()
-    
+
 @review_router.post("/")
 @limiter.limit("30/minute")
 def analyze_review(request: Request, review: ReviewRequest, db: Session = Depends(init_db)) -> ReviewResponse:
     logger.info(f"{request.state.request_id} - Received review for analysis: {review.text} and product: {review.productName}")
+    
+    if review.translation:
+        review.text = Translator.translate(review.text, review.translation.source_language)
+        logger.info(f"{request.state.request_id} - Translation completed: {review.text}")
+    
     result = spacy_integ.analyze_string(review.text)
 
     review = ReviewRepository(db).create(
