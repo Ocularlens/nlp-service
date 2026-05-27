@@ -38,7 +38,7 @@ class BaseRepository:
             "currentPage": page,
             "pageSize": size,
             "totalItems": total,
-            "items": query.all()
+            self.model.__tablename__: query.all()
         }
       
     def delete(self, id):

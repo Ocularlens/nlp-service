@@ -1,4 +1,5 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, status
+from fastapi.responses import JSONResponse
 from app.routes import review_router
 from app.utils import logger, limiter
 from slowapi.errors import RateLimitExceeded
@@ -42,3 +43,11 @@ async def add_request_id(request: Request, call_next):
   return response
 
 server.include_router(review_router, prefix="/api/v1/reviews", tags=["reviews"])
+
+@server.exception_handler(Exception)
+async def generic_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Unhandled exception: {exc}")
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={"message": "An unexpected error occurred. Please try again later."}
+    )
