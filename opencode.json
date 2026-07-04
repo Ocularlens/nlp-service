@@ -1,0 +1,52 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "default_agent": "commander",
+  "agent": {
+    "commander": {
+      "description": "Coordinates multi-step coding tasks — features, bug fixes, refactors — by delegating to planner, implementer, tester, and reviewer in sequence.",
+      "mode": "primary",
+      "model": "opencode/big-pickle",
+      "permission": {
+        "edit": "deny",
+        "bash": "allow",
+        "task": "allow"
+      }
+    },
+    "planner": {
+      "description": "Breaks down tasks into a sequence of steps, each with a clear goal and expected output. Delegates to implementer, tester, and reviewer as needed.",
+      "mode": "subagent",
+      "model": "opencode/big-pickle",
+      "permission": {
+        "edit": "deny",
+        "bash": "allow"
+      }
+    },
+    "implementer": {
+      "description": "Writes code to implement a single step of a task. Delegates to tester and reviewer as needed. Edits code only, never tests.",
+      "mode": "subagent",
+      "model": "opencode/big-pickle",
+      "permission": {
+        "edit": "allow",
+        "bash": "allow"
+      }
+    },
+    "tester": {
+      "description": "Runs the test suite and writes missing tests for new or changed logic. Reports pass/fail with failure details. Edits test files only, never application code.",
+      "mode": "subagent",
+      "model": "opencode/big-pickle",
+      "permission": {
+        "edit": "allow",
+        "bash": "allow"
+      }
+    },
+    "reviewer": {
+      "description": "Reviews diffs against project conventions — naming, error handling, security basics. Read-only, flags issues rather than fixing them.",
+      "mode": "subagent",
+      "model": "opencode/big-pickle",
+      "permission": {
+        "edit": "deny",
+        "bash": "allow"
+      }
+    }
+  }
+}
