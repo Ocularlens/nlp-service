@@ -8,16 +8,18 @@ pip install -r requirements.txt
 python -m spacy download en_core_web_sm
 # Requires PostgreSQL + Redis running locally (see .env for credentials)
 uvicorn app.main:server --reload --host 0.0.0.0 --port 8000
+# Open http://localhost:8000 in your browser
 ```
 
 ## Key facts
 
 - **Framework**: FastAPI + SQLAlchemy + Alembic + spaCy (sentiment analysis)
 - **Entrypoint**: `app.main:server` — the FastAPI instance is named `server`, not `app`
-- **Testing**: pytest 8.x with FastAPI TestClient; 81 tests covering routes, services, repositories
+- **Testing**: pytest 8.x with FastAPI TestClient; 90 tests covering routes, services, repositories
 - **Python 3.11** (Docker uses `python:3.11-slim`)
 - **Dependencies listed in `requirements.txt`** only — no `pyproject.toml` or `setup.py`
 - **.env is gitignored** — `DATABASE_URL` and `REDIS_URL` required at runtime; loaded via `python-dotenv`
+- **Frontend** at `app/static/index.html` served on `GET /` — single-page app that submits reviews to `POST /api/v1/reviews/`
 
 ## Architecture
 
@@ -31,23 +33,43 @@ uvicorn app.main:server --reload --host 0.0.0.0 --port 8000
 | `services`   | `SpacyInteg` (sentiment), `Translator` (Google Translate via `deep-translator`) |
 | `repository` | `BaseRepository`, `ReviewRepository` — wraps SQLAlchemy session |
 | `routes`     | `review_router` — mounted at `GET/POST /api/v1/reviews/` |
+| `static`     | `index.html` — single-page frontend app (plain HTML/CSS/JS with ESM module pattern) |
 | `utils`      | `logger` (uvicorn access logger), `limiter` (slowapi, backed by Redis), `generate_unique_id` (uuid4) |
 
 ### Key patterns
 
-- **Every route depends on `init_db`** to get a SQLAlchemy session via `Depends(init_db)`.
+- **Every route depends on `init_db`** to get a SQLAlchemy session via `Depends(init_db)`, except `GET /` (frontend) and `GET /health` (health check).
 - **Rate limiting**: `@limiter.limit("30/minute")` for POST, `"60/minute"` for GET, `"5/minute"` default.
 - **Request tracing**: middleware injects `request.state.request_id` (uuid4); always include in log messages.
-- **CORS**: only `http://localhost:3000` allowed. Update `allow_origins` if frontend origin changes.
+- **CORS**: only `http://localhost:3000` allowed. Update `allow_origins` if frontend origin changes. The built-in frontend at `GET /` is same-origin, so CORS does not apply.
 - **Translation**: optional — if `review.translation` is set, text is translated to English via GoogleTranslate before analysis.
+
+## Frontend (`app/static/index.html`)
+
+A single-page application served at `GET /` for submitting product reviews and viewing sentiment analysis results.
+
+### Features
+- **Form**: review text (3–120 chars), product name (max 64 chars), optional translation with source language code.
+- **Client-side validation**: inline validation with toast notifications for errors.
+- **API integration**: POSTs to `/api/v1/reviews/` and displays the analysis result.
+- **Result display**: color-coded mood badge (positive/negative/neutral/mixed), sentiment score, positive/negative word counts, signals list, review ID.
+- **UX**: loading spinner on submit, smooth scroll to result, auto-hide toast.
+- **Responsive**: works on mobile and desktop via CSS variables, flexbox/grid, and relative units.
+- **Tech**: plain HTML/CSS/JS with `<script type="module">` (ESM), no framework.
+
+### How to access
+```bash
+# Start the server and open http://localhost:8000
+uvicorn app.main:server --reload --host 0.0.0.0 --port 8000
+```
 
 ## Testing
 
 ```bash
 source venv/bin/activate
-python -m pytest tests/ -v          # full suite (81 tests, ~35s)
-python -m pytest tests/ -v -k spacy  # run only spaCy tests
-python -m pytest tests/ --tb=short   # shorter tracebacks
+python -m pytest tests/ -v            # full suite (90 tests, ~65s)
+python -m pytest tests/ -v -k spacy   # run only spaCy tests
+python -m pytest tests/ --tb=short    # shorter tracebacks
 ```
 
 ### Test infrastructure (`tests/conftest.py`)
@@ -62,10 +84,10 @@ python -m pytest tests/ --tb=short   # shorter tracebacks
 | File | Tests | What it covers |
 |---|---|---|
 | `tests/test_health_endpoint.py` | 3 | GET /health returns 200, correct body, X-Request-ID header |
-| `tests/test_review_routes.py` | 26 | POST/GET `/api/v1/reviews/` — success, validation, pagination, sorting, filters, translation, IDs |
-| `tests/test_spacy_integ.py` | 18 | Positive/negative/neutral/mixed mood, negation (not/n't/never), signals, all word lists |
+| `tests/test_review_routes.py` | 36 | POST/GET `/api/v1/reviews/` — success, validation, pagination, sorting, filters, translation, product-based lookup |
+| `tests/test_spacy_integ.py` | 20 | Positive/negative/neutral/mixed mood, negation (not/n't/never), signals, all word lists |
 | `tests/test_translator.py` | 5 | Delegation to GoogleTranslator, default args, error propagation, edge cases |
-| `tests/test_review_repository.py` | 10 | CRUD, pagination, sorting, filters, UUID generation, known `get_by_id` bug |
+| `tests/test_review_repository.py` | 11 | CRUD, pagination, sorting, filters, UUID generation, known `get_by_id` bug |
 | `tests/test_base_repository.py` | 15 | Full CRUD, pagination, sorting, where filters, update/delete/not-found |
 
 ### Known test limitations / bugs discovered
@@ -104,9 +126,11 @@ docker run -p 8000:8000 -e DATABASE_URL=... -e REDIS_URL=... nlp-service:latest
 
 - Multi-stage build: builder installs deps + downloads spaCy model; runtime copies only site-packages + `app/`.
 - `CMD` is `uvicorn app.main:server --host 0.0.0.0 --port 8000` (no `--reload`).
+- Frontend static files are bundled inside the Docker image (`app/static/` is part of `app/`).
 
 ## Gotchas
 
+- **`GET /`** serves the single-page frontend (`app/static/index.html`) via `FileResponse`. It is the only route that does not require a database session or rate limiting.
 - **`GET /health`** returns `{"message": "Service is healthy!"}` — probe uses `@server.get`, not under the review router prefix.
 - **`app/__init__.py`** logs on import — triggers `uvicorn.access` logger at module load time.
 - **No pagination safety** in `get_all()`: `total // size` integer division; pass `page >= 1`.

@@ -1,0 +1,833 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Review Analyzer</title>
+    <style>
+      /* ===== Theme Variables ===== */
+      :root {
+        --color-bg: #f8fafc;
+        --color-surface: #ffffff;
+        --color-primary: #3b82f6;
+        --color-primary-hover: #2563eb;
+        --color-primary-light: #eff6ff;
+        --color-text: #1e293b;
+        --color-text-muted: #64748b;
+        --color-border: #e2e8f0;
+        --color-success: #10b981;
+        --color-warning: #f59e0b;
+        --color-danger: #ef4444;
+        --color-neutral: #6b7280;
+        --radius: 8px;
+        --shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
+        --shadow-lg:
+          0 4px 6px rgba(0, 0, 0, 0.07), 0 10px 15px rgba(0, 0, 0, 0.05);
+        --font:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+          Cantarell, sans-serif;
+        --max-width: 720px;
+      }
+
+      /* ===== Reset & Base ===== */
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: var(--font);
+        background: var(--color-bg);
+        color: var(--color-text);
+        line-height: 1.6;
+        min-height: 100vh;
+      }
+
+      /* ===== Layout ===== */
+      .container {
+        max-width: var(--max-width);
+        margin: 0 auto;
+        margin-top: 1.5rem;
+        padding: 0 1.5rem;
+      }
+
+      header {
+        background: var(--color-surface);
+        border-bottom: 1px solid var(--color-border);
+        padding: 1.25rem 0;
+        box-shadow: var(--shadow);
+      }
+
+      header .container {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+      }
+
+      header h1 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+      }
+
+      header .badge {
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        background: var(--color-primary-light);
+        color: var(--color-primary);
+        padding: 0.2rem 0.6rem;
+        border-radius: 999px;
+      }
+
+      main {
+        padding: 2.5rem 0;
+      }
+
+      /* ===== Card ===== */
+      .card {
+        background: var(--color-surface);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-lg);
+        padding: 2rem;
+        margin-bottom: 2rem;
+      }
+
+      .card h2 {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      /* ===== Form ===== */
+      .form-group {
+        margin-bottom: 1.25rem;
+      }
+
+      .form-group label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 600;
+        margin-bottom: 0.375rem;
+        color: var(--color-text);
+      }
+
+      .form-group .hint {
+        display: block;
+        font-size: 0.8rem;
+        color: var(--color-text-muted);
+        margin-bottom: 0.375rem;
+      }
+
+      .form-group input,
+      .form-group textarea {
+        width: 100%;
+        padding: 0.625rem 0.875rem;
+        font-size: 0.95rem;
+        font-family: inherit;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius);
+        background: var(--color-surface);
+        color: var(--color-text);
+        transition:
+          border-color 0.15s,
+          box-shadow 0.15s;
+        outline: none;
+      }
+
+      .form-group input:focus,
+      .form-group textarea:focus {
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+      }
+
+      .form-group textarea {
+        resize: vertical;
+        min-height: 80px;
+      }
+
+      .form-group input::placeholder,
+      .form-group textarea::placeholder {
+        color: var(--color-text-muted);
+        opacity: 0.7;
+      }
+
+      .form-row {
+        display: flex;
+        gap: 1rem;
+      }
+
+      .form-row .form-group {
+        flex: 1;
+      }
+
+      /* ===== Checkbox / Toggle ===== */
+      .toggle-group {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1.25rem;
+      }
+
+      .toggle-group label {
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .toggle-group input[type="checkbox"] {
+        width: 1.1rem;
+        height: 1.1rem;
+        accent-color: var(--color-primary);
+        cursor: pointer;
+      }
+
+      .toggle-group .hint {
+        font-size: 0.8rem;
+        color: var(--color-text-muted);
+      }
+
+      /* ===== Translation options ===== */
+      #translation-options {
+        display: none;
+        padding: 1rem 1.25rem;
+        background: var(--color-primary-light);
+        border: 1px solid #bfdbfe;
+        border-radius: var(--radius);
+        margin-bottom: 1.25rem;
+      }
+
+      #translation-options.visible {
+        display: block;
+      }
+
+      /* ===== Buttons ===== */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.7rem 1.5rem;
+        font-size: 0.95rem;
+        font-weight: 600;
+        font-family: inherit;
+        border: none;
+        border-radius: var(--radius);
+        cursor: pointer;
+        transition:
+          background 0.15s,
+          transform 0.1s;
+      }
+
+      .btn:active {
+        transform: scale(0.98);
+      }
+
+      .btn-primary {
+        background: var(--color-primary);
+        color: #fff;
+      }
+
+      .btn-primary:hover,
+      .btn-primary:focus-visible {
+        background: var(--color-primary-hover);
+      }
+
+      .btn-primary:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      .btn-submit {
+        width: 100%;
+        padding: 0.8rem;
+        font-size: 1rem;
+      }
+
+      /* ===== Spinner ===== */
+      .spinner {
+        display: inline-block;
+        width: 1.2rem;
+        height: 1.2rem;
+        border: 2.5px solid rgba(255, 255, 255, 0.3);
+        border-top-color: #fff;
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* ===== Result ===== */
+      #result-section {
+        display: none;
+      }
+
+      #result-section.visible {
+        display: block;
+      }
+
+      .result-mood {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.35rem 1rem;
+        border-radius: 999px;
+        font-size: 0.9rem;
+        font-weight: 700;
+        text-transform: capitalize;
+      }
+
+      .result-mood.positive {
+        background: #d1fae5;
+        color: #065f46;
+      }
+
+      .result-mood.negative {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+
+      .result-mood.neutral {
+        background: #f3f4f6;
+        color: #374151;
+      }
+
+      .result-mood.mixed {
+        background: #fef3c7;
+        color: #92400e;
+      }
+
+      .result-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 1rem;
+        margin: 1.25rem 0;
+      }
+
+      .result-stat {
+        background: var(--color-bg);
+        border-radius: var(--radius);
+        padding: 1rem;
+        text-align: center;
+      }
+
+      .result-stat .value {
+        font-size: 1.75rem;
+        font-weight: 700;
+        line-height: 1.2;
+      }
+
+      .result-stat .label {
+        font-size: 0.8rem;
+        color: var(--color-text-muted);
+        margin-top: 0.25rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      .result-stat .value.positive-val {
+        color: var(--color-success);
+      }
+      .result-stat .value.negative-val {
+        color: var(--color-danger);
+      }
+      .result-stat .value.neutral-val {
+        color: var(--color-neutral);
+      }
+
+      .signals-list {
+        margin-top: 1rem;
+      }
+
+      .signals-list h3 {
+        font-size: 0.9rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: var(--color-text-muted);
+      }
+
+      .signals-list ul {
+        list-style: none;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+      }
+
+      .signals-list li {
+        font-size: 0.8rem;
+        background: var(--color-bg);
+        border: 1px solid var(--color-border);
+        border-radius: 999px;
+        padding: 0.2rem 0.7rem;
+      }
+
+      .result-footer {
+        margin-top: 1.25rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--color-border);
+        font-size: 0.85rem;
+        color: var(--color-text-muted);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+
+      .result-footer code {
+        font-size: 0.8rem;
+        background: var(--color-bg);
+        padding: 0.15rem 0.45rem;
+        border-radius: 4px;
+        border: 1px solid var(--color-border);
+        word-break: break-all;
+      }
+
+      .result-message {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1rem;
+        border-radius: var(--radius);
+        font-weight: 600;
+        font-size: 0.95rem;
+        margin-bottom: 1.25rem;
+      }
+
+      .result-message.success {
+        background: #d1fae5;
+        color: #065f46;
+      }
+
+      .result-message.error {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+
+      /* ===== Error toast ===== */
+      .toast {
+        display: none;
+        position: fixed;
+        bottom: 1.5rem;
+        right: 1.5rem;
+        max-width: 400px;
+        padding: 0.875rem 1.25rem;
+        border-radius: var(--radius);
+        background: var(--color-danger);
+        color: #fff;
+        font-weight: 600;
+        font-size: 0.9rem;
+        box-shadow: var(--shadow-lg);
+        z-index: 1000;
+        animation: slideUp 0.25s ease-out;
+      }
+
+      .toast.visible {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+      }
+
+      @keyframes slideUp {
+        from {
+          opacity: 0;
+          transform: translateY(1rem);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .toast-close {
+        background: none;
+        border: none;
+        color: #fff;
+        font-size: 1.2rem;
+        cursor: pointer;
+        padding: 0 0.25rem;
+        line-height: 1;
+        opacity: 0.8;
+      }
+
+      .toast-close:hover {
+        opacity: 1;
+      }
+
+      /* ===== Responsive ===== */
+      @media (max-width: 600px) {
+        header .container {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 0.25rem;
+        }
+
+        .form-row {
+          flex-direction: column;
+          gap: 0;
+        }
+
+        .card {
+          padding: 1.25rem;
+        }
+
+        .result-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+
+        .toast {
+          left: 1rem;
+          right: 1rem;
+          max-width: none;
+        }
+      }
+
+      /* ===== Focus visible ===== */
+      :focus-visible {
+        outline: 2px solid var(--color-primary);
+        outline-offset: 2px;
+      }
+
+      /* ===== Utility ===== */
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        border: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ===== Header ===== -->
+    <header>
+      <div class="container">
+        <h1>Review Analyzer</h1>
+        <span class="badge">NLP Service</span>
+      </div>
+    </header>
+
+    <!-- ===== Main ===== -->
+    <main class="container">
+      <!-- ===== Form Card ===== -->
+      <section class="card" id="review-form-section">
+        <h2>✍️ Submit a Review</h2>
+
+        <form id="review-form" novalidate>
+          <div class="form-group">
+            <label for="review-text">Review Text</label>
+            <span class="hint"
+              >Write your product review in 3–120 characters.</span
+            >
+            <textarea
+              id="review-text"
+              name="text"
+              placeholder="This product is amazing! It exceeded my expectations."
+              minlength="3"
+              maxlength="120"
+              required
+              aria-describedby="text-hint"
+            ></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="product-name">Product Name</label>
+            <span class="hint"
+              >Name of the product being reviewed (max 64 characters).</span
+            >
+            <input
+              id="product-name"
+              name="productName"
+              type="text"
+              placeholder="SuperWidget 3000"
+              minlength="1"
+              maxlength="64"
+              required
+            />
+          </div>
+
+          <div class="toggle-group">
+            <input type="checkbox" id="translation-toggle" />
+            <label for="translation-toggle"
+              >Translate from another language</label
+            >
+            <span class="hint">(optional)</span>
+          </div>
+
+          <div
+            id="translation-options"
+            role="region"
+            aria-labelledby="translation-toggle"
+          >
+            <div class="form-group">
+              <label for="source-language">Source Language Code</label>
+              <span class="hint"
+                >e.g. <code>es</code> for Spanish, <code>fr</code> for French,
+                or <code>auto</code> for auto-detect.</span
+              >
+              <input
+                id="source-language"
+                name="sourceLanguage"
+                type="text"
+                placeholder="es"
+                minlength="2"
+                maxlength="5"
+              />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            class="btn btn-primary btn-submit"
+            id="submit-btn"
+          >
+            Analyze Review
+          </button>
+        </form>
+      </section>
+
+      <!-- ===== Result Card ===== -->
+      <section class="card" id="result-section" aria-live="polite">
+        <h2>📊 Analysis Result</h2>
+
+        <div id="result-content">
+          <!-- populated by JS -->
+        </div>
+      </section>
+    </main>
+
+    <!-- ===== Toast ===== -->
+    <div id="toast" class="toast" role="alert">
+      <span id="toast-message"></span>
+      <button class="toast-close" id="toast-close" aria-label="Dismiss">
+        &times;
+      </button>
+    </div>
+
+    <script type="module">
+      /* ============================================================
+       * Review Analyzer — ESM Module
+       * ============================================================ */
+
+      // ---- DOM refs ----
+      const form = document.getElementById("review-form");
+      const textInput = document.getElementById("review-text");
+      const productInput = document.getElementById("product-name");
+      const toggleCheckbox = document.getElementById("translation-toggle");
+      const translationOpts = document.getElementById("translation-options");
+      const langInput = document.getElementById("source-language");
+      const submitBtn = document.getElementById("submit-btn");
+      const resultSection = document.getElementById("result-section");
+      const resultContent = document.getElementById("result-content");
+      const toast = document.getElementById("toast");
+      const toastMsg = document.getElementById("toast-message");
+      const toastClose = document.getElementById("toast-close");
+
+      // ---- State helpers ----
+      function setLoading(loading) {
+        submitBtn.disabled = loading;
+        submitBtn.innerHTML = loading
+          ? '<span class="spinner"></span> Analyzing…'
+          : "Analyze Review";
+      }
+
+      // ---- Toast ----
+      function showToast(message) {
+        toastMsg.textContent = message;
+        toast.classList.add("visible");
+      }
+
+      function hideToast() {
+        toast.classList.remove("visible");
+      }
+
+      toastClose.addEventListener("click", hideToast);
+
+      // Auto-hide toast after 5 s
+      function autoHideToast() {
+        setTimeout(hideToast, 5000);
+      }
+
+      // ---- Translation toggle ----
+      toggleCheckbox.addEventListener("change", () => {
+        translationOpts.classList.toggle("visible", toggleCheckbox.checked);
+        if (!toggleCheckbox.checked) {
+          langInput.value = "";
+          langInput.removeAttribute("required");
+        } else {
+          langInput.setAttribute("required", "required");
+        }
+      });
+
+      // ---- Render result ----
+      function renderResult(data) {
+        const { message, analysis_result, review_id } = data;
+        const {
+          mood,
+          sentiment_score,
+          positive_count,
+          negative_count,
+          signals,
+        } = analysis_result;
+
+        // Mood badge class
+        const moodClass = mood.toLowerCase();
+
+        // Signals HTML
+        const signalsHtml =
+          signals && signals.length > 0
+            ? `<div class="signals-list">
+            <h3>Signals (${signals.length})</h3>
+            <ul>${signals.map((s) => `<li>${escapeHtml(s)}</li>`).join("")}</ul>
+          </div>`
+            : "";
+
+        resultContent.innerHTML = `
+        <div class="result-message success">
+          <span>✅</span> ${escapeHtml(message)}
+        </div>
+
+        <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:0.5rem;">
+          <span>Mood:</span>
+          <span class="result-mood ${moodClass}">${escapeHtml(mood)}</span>
+        </div>
+
+        <div class="result-grid">
+          <div class="result-stat">
+            <div class="value ${moodClass}-val">${sentiment_score}</div>
+            <div class="label">Sentiment Score</div>
+          </div>
+          <div class="result-stat">
+            <div class="value positive-val">${positive_count}</div>
+            <div class="label">Positive Words</div>
+          </div>
+          <div class="result-stat">
+            <div class="value negative-val">${negative_count}</div>
+            <div class="label">Negative Words</div>
+          </div>
+        </div>
+
+        ${signalsHtml}
+
+        <div class="result-footer">
+          <span>Review ID:</span>
+          <code>${escapeHtml(review_id)}</code>
+        </div>
+      `;
+
+        resultSection.classList.add("visible");
+        resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+
+      // ---- Escape HTML ----
+      function escapeHtml(str) {
+        const div = document.createElement("div");
+        div.textContent = str;
+        return div.innerHTML;
+      }
+
+      // ---- Submit review ----
+      async function submitReview(text, productName, translation) {
+        const body = { text, productName };
+        if (translation) {
+          body.translation = { source_language: translation };
+        }
+
+        const response = await fetch("/api/v1/reviews/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+
+        if (!response.ok) {
+          let detail = `Server error (${response.status})`;
+          try {
+            const err = await response.json();
+            if (err.detail) detail = err.detail;
+            else if (err.message) detail = err.message;
+          } catch (_) {
+            /* use default */
+          }
+          throw new Error(detail);
+        }
+
+        return response.json();
+      }
+
+      // ---- Form submit handler ----
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        hideToast();
+
+        const text = textInput.value.trim();
+        const productName = productInput.value.trim();
+        const translation = toggleCheckbox.checked
+          ? langInput.value.trim()
+          : null;
+
+        // Client-side validation
+        if (text.length < 3 || text.length > 120) {
+          showToast("Review text must be between 3 and 120 characters.");
+          autoHideToast();
+          textInput.focus();
+          return;
+        }
+        if (!productName || productName.length > 64) {
+          showToast("Product name is required (max 64 characters).");
+          autoHideToast();
+          productInput.focus();
+          return;
+        }
+        if (
+          translation &&
+          (!langInput.value.trim() || langInput.value.trim().length < 2)
+        ) {
+          showToast("Please enter a valid language code (e.g. es, fr, auto).");
+          autoHideToast();
+          langInput.focus();
+          return;
+        }
+
+        setLoading(true);
+
+        try {
+          const data = await submitReview(
+            text,
+            productName,
+            translation || undefined,
+          );
+          renderResult(data);
+        } catch (err) {
+          showToast(err.message || "An unexpected error occurred.");
+          autoHideToast();
+        } finally {
+          setLoading(false);
+        }
+      });
+
+      // ---- Reset result when form changes (optional UX) ----
+      // If user starts editing, hide the old result to avoid confusion
+      function onFormChange() {
+        resultSection.classList.remove("visible");
+      }
+      textInput.addEventListener("input", onFormChange);
+      productInput.addEventListener("input", onFormChange);
+
+      console.log("Review Analyzer loaded ✓");
+    </script>
+  </body>
+</html>

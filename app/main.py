@@ -1,11 +1,12 @@
 from fastapi import FastAPI, Request, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from app.routes import review_router
 from app.utils import logger, limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi import _rate_limit_exceeded_handler
 from fastapi.middleware.cors import CORSMiddleware
 import uuid
+import os
 
 server = FastAPI(
     title="Review Service",
@@ -23,6 +24,17 @@ server.add_middleware(
     allow_headers=["Authorization", "Content-Type"],
 )
 
+# Path to the static frontend
+STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
+INDEX_HTML = os.path.join(STATIC_DIR, "index.html")
+
+
+@server.get("/")
+def serve_frontend():
+    """Serve the single-page frontend application."""
+    return FileResponse(INDEX_HTML)
+
+
 @server.get("/health")
 @limiter.limit("60/minute")
 def root(request: Request):
@@ -32,6 +44,7 @@ def root(request: Request):
     '''
     logger.info("Health check endpoint called")
     return {"message": "Service is healthy!"}
+
 
 @server.middleware("http")
 async def add_request_id(request: Request, call_next):
