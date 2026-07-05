@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "mobile-first-design": {
+      "source": "aj-geddes/useful-ai-prompts",
+      "sourceType": "github",
+      "skillPath": "skills/mobile-first-design/SKILL.md",
+      "computedHash": "a60a398d4958414691e16d820eef4784be3b1def2e04500b47c5836a67b56a9a"
+    },
+    "vanilla-web": {
+      "source": "janjaszczak/cursor",
+      "sourceType": "github",
+      "skillPath": "skills/vanilla-web/SKILL.md",
+      "computedHash": "71d55c038df13f897175218b6040de5d3a7749f15b4117a25ca9598c3cf77233"
+    }
+  }
+}
