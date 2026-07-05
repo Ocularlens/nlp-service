@@ -5,6 +5,7 @@ Sets up:
 - Environment variables before app imports (memory:// Redis, SQLite DB)
 - Temporary file-based SQLite database (avoids per-connection isolation of :memory:)
 - Mocked Translator to avoid real Google Translate API calls
+- Disabled rate limiter for test stability
 - FastAPI TestClient with overridden dependencies
 """
 import os
@@ -19,6 +20,23 @@ from unittest.mock import patch
 os.environ["REDIS_URL"] = "memory://"
 os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 
+# Disable the rate limiter before any app module imports.
+# SlowAPI's @limiter.limit("N/minute") decorators are applied at import time,
+# so we must patch the Limiter class before app.utils.limiter is imported.
+import slowapi
+_original_limiter_cls = slowapi.Limiter
+
+
+class _TestLimiter(_original_limiter_cls):
+    """Limiter subclass that never enforces limits during tests."""
+
+    def limit(self, limit_value, *args, **kwargs):
+        # Return a no-op decorator instead of an actual rate-limited one
+        return lambda f: f
+
+
+slowapi.Limiter = _TestLimiter
+
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
@@ -26,6 +44,10 @@ from sqlalchemy.pool import NullPool
 
 from app.main import server
 from app.infra.database import Base, init_db
+
+
+# Track the test database file path so db_session can reuse it
+_test_db_path: str = ""
 
 
 @pytest.fixture(autouse=True)
@@ -54,9 +76,12 @@ def test_client() -> Generator[TestClient, None, None]:
 
     Creates all tables before each test and cleans up the database file after.
     """
+    global _test_db_path
+
     # Create a temporary file for the SQLite database
     fd, db_path = tempfile.mkstemp(suffix=".sqlite")
     os.close(fd)
+    _test_db_path = db_path
 
     # Create engine with NullPool and check_same_thread=False
     # to support cross-thread access from TestClient
@@ -86,6 +111,7 @@ def test_client() -> Generator[TestClient, None, None]:
         os.unlink(db_path)
     except OSError:
         pass
+    _test_db_path = ""
 
 
 @pytest.fixture
@@ -93,15 +119,12 @@ def db_session(test_client: TestClient) -> Generator[Session, None, None]:
     """Provide a SQLAlchemy session for direct database testing.
 
     This fixture depends on test_client so that the dependency override
-    is already registered. It creates a fresh session bound to the same
-    SQLite database file used by test_client.
+    is already registered. It connects to the same temporary SQLite
+    database file used by test_client.
     """
-    # We need a session that connects to the same database used by the
-    # test_client override. Since test_client manages the engine, we
-    # just yield a basic session.
-    from app.infra.database import database as app_database
+    global _test_db_path
     engine = create_engine(
-        str(app_database.url),
+        f"sqlite:///{_test_db_path}",
         connect_args={"check_same_thread": False},
         poolclass=NullPool,
     )

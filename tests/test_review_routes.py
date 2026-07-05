@@ -254,7 +254,10 @@ class TestGetReviews:
         response = test_client.get("/api/v1/reviews/?product_filter=Alpha")
         data = response.json()
         assert data["totalItems"] == 1
-        assert data["reviews"][0]["product"] == "Alpha"
+        # The route filters by product name via a join;
+        # the product relationship is eagerly loaded and serialized
+        assert data["reviews"][0]["product"]["product_name"] == "ALPHA"
+        assert len(data["reviews"][0]["product_id"]) > 0
 
     def test_get_reviews_filter_by_review_text(
         self, test_client: TestClient, sample_review: dict
@@ -327,3 +330,107 @@ class TestGetReviews:
         data = response.json()
         assert data["currentPage"] == 1
         assert data["pageSize"] == 10
+
+
+class TestGetReviewsByProduct:
+    """Test suite for GET /api/v1/reviews/{product_name}."""
+
+    def test_get_reviews_by_product_found(
+        self, test_client: TestClient, sample_review: dict
+    ):
+        """GET by product name should return reviews for that product."""
+        test_client.post("/api/v1/reviews/", json={"productName": "Widget", "text": "Great"})
+        test_client.post("/api/v1/reviews/", json={"productName": "Widget", "text": "Second"})
+        test_client.post("/api/v1/reviews/", json={"productName": "Other", "text": "Other"})
+
+        response = test_client.get("/api/v1/reviews/Widget")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["product_name"] == "WIDGET"
+        assert data["totalItems"] == 2
+        assert len(data["reviews"]) == 2
+
+    def test_get_reviews_by_product_not_found(self, test_client: TestClient):
+        """GET by non-existent product should return 404."""
+        response = test_client.get("/api/v1/reviews/NonExistent")
+        assert response.status_code == 404
+
+    def test_get_reviews_by_product_case_insensitive(
+        self, test_client: TestClient, sample_review: dict
+    ):
+        """GET by product name should be case-insensitive (uppercase lookup)."""
+        test_client.post("/api/v1/reviews/", json={"productName": "MyProduct", "text": "Case test"})
+
+        # Lookup with different case
+        response = test_client.get("/api/v1/reviews/myproduct")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["product_name"] == "MYPRODUCT"
+        assert data["totalItems"] == 1
+
+    def test_get_reviews_by_product_empty(
+        self, test_client: TestClient
+    ):
+        """GET by product name with no reviews should return 404."""
+        response = test_client.get("/api/v1/reviews/EmptyProduct")
+        assert response.status_code == 404
+
+    def test_get_reviews_by_product_pagination(
+        self, test_client: TestClient
+    ):
+        """GET by product name should support pagination."""
+        # Create 5 reviews for the same product
+        for i in range(5):
+            test_client.post(
+                "/api/v1/reviews/",
+                json={"productName": "PaginatedProduct", "text": f"Review {i}"},
+            )
+
+        # Page 1 with size 2
+        page1 = test_client.get("/api/v1/reviews/PaginatedProduct?page=1&size=2").json()
+        assert page1["totalItems"] == 5
+        assert page1["totalPages"] == 3
+        assert len(page1["reviews"]) == 2
+        assert page1["currentPage"] == 1
+        assert page1["product_name"] == "PAGINATEDPRODUCT"
+
+        # Page 3 with size 2 (last page)
+        page3 = test_client.get("/api/v1/reviews/PaginatedProduct?page=3&size=2").json()
+        assert len(page3["reviews"]) == 1
+        assert page3["currentPage"] == 3
+
+    def test_get_reviews_by_product_response_structure(
+        self, test_client: TestClient
+    ):
+        """GET by product name should include review details."""
+        test_client.post("/api/v1/reviews/", json={"productName": "StructTest", "text": "Structure check"})
+
+        response = test_client.get("/api/v1/reviews/StructTest")
+        data = response.json()
+        review = data["reviews"][0]
+
+        assert "review_id" in review
+        assert "review_text" in review
+        assert "rating" in review
+        assert "mood" in review
+        assert "product_id" in review
+        assert "product" in review
+        assert review["product"]["product_name"] == "STRUCTTEST"
+
+    def test_get_reviews_by_product_invalid_page(self, test_client: TestClient):
+        """GET with page < 1 should return 422."""
+        response = test_client.get("/api/v1/reviews/AnyProduct?page=0")
+        assert response.status_code == 422
+
+    def test_get_reviews_by_product_invalid_size(self, test_client: TestClient):
+        """GET with size > 100 should return 422."""
+        response = test_client.get("/api/v1/reviews/AnyProduct?size=101")
+        assert response.status_code == 422
+
+    def test_get_reviews_by_product_request_id(
+        self, test_client: TestClient
+    ):
+        """GET by product name should include X-Request-ID header."""
+        test_client.post("/api/v1/reviews/", json={"productName": "HeaderCheck", "text": "Header test"})
+        response = test_client.get("/api/v1/reviews/HeaderCheck")
+        assert "X-Request-ID" in response.headers
