@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Leaderboard — Review Analyzer</title>
+    <link rel="stylesheet" href="/static/styles.css">
+  </head>
+  <body>
+    <!-- ===== Header ===== -->
+    <header>
+      <div class="container">
+        <h1>Review Analyzer</h1>
+        <nav class="page-nav">
+          <a href="/" class="nav-link">✍️ Review</a>
+          <a href="/leaderboard" class="nav-link active">🏆 Leaderboard</a>
+        </nav>
+        <span class="badge">NLP Service</span>
+      </div>
+    </header>
+
+    <!-- ===== Main ===== -->
+    <main class="container">
+      <!-- ===== Leaderboard Card ===== -->
+      <section class="card" id="leaderboard-section" aria-live="polite">
+        <div class="leaderboard-header">
+          <h2>🏆 Product Leaderboard</h2>
+          <button
+            class="btn btn-secondary btn-sm"
+            id="leaderboard-refresh-btn"
+            type="button"
+          >
+            🔄 Refresh
+          </button>
+        </div>
+
+        <div id="leaderboard-content">
+          <div class="leaderboard-loading">
+            <span class="spinner spinner-dark"></span>
+            Loading leaderboard…
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- ===== Toast ===== -->
+    <div id="toast" class="toast" role="alert">
+      <span id="toast-message"></span>
+      <button class="toast-close" id="toast-close" aria-label="Dismiss">
+        &times;
+      </button>
+    </div>
+
+    <!-- ===== Tooltip ===== -->
+    <div id="tooltip" class="tooltip" role="tooltip" aria-hidden="true">
+      <div class="tooltip-content" id="tooltip-content"></div>
+      <div class="tooltip-arrow"></div>
+    </div>
+
+    <script type="module" src="/static/js/leaderboard.js"></script>
+  </body>
+</html>

@@ -1,10 +1,9 @@
-from fastapi import APIRouter, Depends, Request, Query, HTTPException
-from fastapi import status as http_status
+from fastapi import APIRouter, Depends, Request, Query
 from app.services import SpacyInteg, Translator
 from app.services.leaderboard import leaderboard_service
 from app.models import Review, Product
 from app.infra import init_db
-from sqlalchemy.orm import Session, contains_eager, joinedload
+from sqlalchemy.orm import Session, contains_eager
 from app.repository import ReviewRepository, ProductRepository
 from app.utils import logger, limiter
 from app.schema import ReviewRequest, ReviewResponse
@@ -47,49 +46,6 @@ def analyze_review(request: Request, review: ReviewRequest, db: Session = Depend
         "message": "Review successfully analyzed and stored",
         "analysis_result": result,
         "review_id": new_review.review_id
-    }
-
-
-@review_router.get("/{product_name}")
-@limiter.limit("60/minute")
-def get_reviews_by_product(
-        request: Request,
-        product_name: str,
-        db: Session = Depends(init_db),
-        page: int = Query(1, ge=1),
-        size: int = Query(10, ge=1, le=100)
-    ):
-    logger.info(f"{request.state.request_id} - Fetching reviews for product: {product_name}")
-
-    # Look up product by uppercase name
-    product = ProductRepository(db).get(product_name)
-    if not product:
-        raise HTTPException(
-            status_code=http_status.HTTP_404_NOT_FOUND,
-            detail=f"Product '{product_name}' not found"
-        )
-
-    # Query reviews for this product with eager-loaded product relationship
-    query = (
-        db.query(Review)
-        .options(joinedload(Review.product))
-        .filter(Review.product_id == product.product_id)
-    )
-
-    total = query.count()
-
-    if page is not None and size is not None:
-        query = query.offset((page - 1) * size).limit(size)
-
-    reviews = query.all()
-
-    return {
-        "product_name": product.product_name,
-        "totalPages": (total + size - 1) // size,
-        "currentPage": page,
-        "pageSize": size,
-        "totalItems": total,
-        "reviews": reviews
     }
 
 

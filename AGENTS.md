@@ -15,7 +15,7 @@ uvicorn app.main:server --reload --host 0.0.0.0 --port 8000
 
 - **Framework**: FastAPI + SQLAlchemy + Alembic + spaCy (sentiment analysis)
 - **Entrypoint**: `app.main:server` — the FastAPI instance is named `server`, not `app`
-- **Testing**: pytest 8.x with FastAPI TestClient; 90 tests covering routes, services, repositories
+- **Testing**: pytest 8.x with FastAPI TestClient; 102 tests covering routes, services, repositories
 - **Python 3.11** (Docker uses `python:3.11-slim`)
 - **Dependencies listed in `requirements.txt`** only — no `pyproject.toml` or `setup.py`
 - **.env is gitignored** — `DATABASE_URL` and `REDIS_URL` required at runtime; loaded via `python-dotenv`
@@ -31,8 +31,8 @@ uvicorn app.main:server --reload --host 0.0.0.0 --port 8000
 | `models`     | `Review` (aliased from `ReviewModel`) — table `reviews`, PK is `review_id` (UUID string, 64 chars) |
 | `schema`     | `ReviewRequest`, `ReviewResponse` — Pydantic models (`text`, `productName`, optional `translation`) |
 | `services`   | `SpacyInteg` (sentiment), `Translator` (Google Translate via `deep-translator`) |
-| `repository` | `BaseRepository`, `ReviewRepository` — wraps SQLAlchemy session |
-| `routes`     | `review_router` — mounted at `GET/POST /api/v1/reviews/` |
+| `repository` | `BaseRepository`, `ReviewRepository`, `ProductRepository` — wraps SQLAlchemy session |
+| `routes`     | `review_router`, `leaderboard_router`, `product_router` — see endpoint listing below |
 | `static`     | `index.html` — single-page frontend app (plain HTML/CSS/JS with ESM module pattern) |
 | `utils`      | `logger` (uvicorn access logger), `limiter` (slowapi, backed by Redis), `generate_unique_id` (uuid4) |
 
@@ -43,6 +43,20 @@ uvicorn app.main:server --reload --host 0.0.0.0 --port 8000
 - **Request tracing**: middleware injects `request.state.request_id` (uuid4); always include in log messages.
 - **CORS**: only `http://localhost:3000` allowed. Update `allow_origins` if frontend origin changes. The built-in frontend at `GET /` is same-origin, so CORS does not apply.
 - **Translation**: optional — if `review.translation` is set, text is translated to English via GoogleTranslate before analysis.
+- **Route ordering in product router**: `/{product_name}/reviews/latest` must be defined before `/{product_name}/reviews` — otherwise FastAPI matches `latest` as a `product_name`.
+
+### Endpoints
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/` | Serve frontend SPA |
+| `GET` | `/leaderboard` | Serve leaderboard page |
+| `GET` | `/health` | Health check |
+| `POST` | `/api/v1/reviews/` | Create and analyze a review |
+| `GET` | `/api/v1/reviews/` | List all reviews (filtered, sorted, paginated) |
+| `GET` | `/api/v1/leaderboard/` | Leaderboard data from Redis |
+| `GET` | `/api/v1/products/{product_name}/reviews` | Reviews for a product (paginated) |
+| `GET` | `/api/v1/products/{product_name}/reviews/latest` | Most recent review for a product |
 
 ## Frontend (`app/static/index.html`)
 
@@ -67,7 +81,7 @@ uvicorn app.main:server --reload --host 0.0.0.0 --port 8000
 
 ```bash
 source venv/bin/activate
-python -m pytest tests/ -v            # full suite (90 tests, ~65s)
+python -m pytest tests/ -v            # full suite (102 tests, ~90s)
 python -m pytest tests/ -v -k spacy   # run only spaCy tests
 python -m pytest tests/ --tb=short    # shorter tracebacks
 ```
@@ -89,6 +103,7 @@ python -m pytest tests/ --tb=short    # shorter tracebacks
 | `tests/test_translator.py` | 5 | Delegation to GoogleTranslator, default args, error propagation, edge cases |
 | `tests/test_review_repository.py` | 11 | CRUD, pagination, sorting, filters, UUID generation, known `get_by_id` bug |
 | `tests/test_base_repository.py` | 15 | Full CRUD, pagination, sorting, where filters, update/delete/not-found |
+| `tests/test_product_routes.py` | 12 | GET `/api/v1/products/{product_name}/reviews` and `/reviews/latest` — found, not found, case-insensitive, empty, pagination, response structure, validation, request ID |
 
 ### Known test limitations / bugs discovered
 
@@ -138,3 +153,4 @@ docker run -p 8000:8000 -e DATABASE_URL=... -e REDIS_URL=... nlp-service:latest
 - **`base_repository.py:get_all`** uses `and_(*where)` with `True` placeholders for inactive filters — SQLAlchemy ignores `True` conditions, but this works in practice.
 - **`sort_by` parameter** uses `Query(..., enum=[...])` but the enum is not enforced at the Pydantic/FastAPI level — invalid values pass through and crash the repository layer.
 - **SQLite threading**: When writing tests, use a file-based SQLite database (not `:memory:`) to avoid per-connection isolation issues with TestClient's multi-threaded request execution.
+- **Product router path ordering**: `GET /api/v1/products/{product_name}/reviews/latest` must be registered before `GET /api/v1/products/{product_name}/reviews` in the router. FastAPI matches routes top-down, so the more specific path must come first to avoid `latest` being captured as a product name.

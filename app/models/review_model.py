@@ -1,5 +1,5 @@
 from app.infra import Base
-from sqlalchemy import Column, ForeignKey, Integer, String
+from sqlalchemy import Column, ForeignKey, Integer, String, DateTime, func
 from sqlalchemy.orm import relationship
 
 
@@ -11,5 +11,6 @@ class ReviewModel(Base):
     review_text = Column(String(120), nullable=False)
     rating = Column(Integer, nullable=False)
     mood = Column(String(20), nullable=False)
+    created_at = Column(DateTime, server_default=func.now(), nullable=False)
 
     product = relationship("ProductModel", back_populates="reviews")

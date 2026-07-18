@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request, status
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from app.routes import review_router, leaderboard_router
+from app.routes import review_router, leaderboard_router, product_router
 from app.utils import logger, limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi import _rate_limit_exceeded_handler
@@ -28,12 +28,19 @@ server.add_middleware(
 # Path to the static frontend
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 INDEX_HTML = os.path.join(STATIC_DIR, "index.html")
+LEADERBOARD_HTML = os.path.join(STATIC_DIR, "leaderboard.html")
 
 
 @server.get("/")
 def serve_frontend():
     """Serve the single-page frontend application."""
     return FileResponse(INDEX_HTML)
+
+
+@server.get("/leaderboard")
+def serve_leaderboard():
+    """Serve the leaderboard page."""
+    return FileResponse(LEADERBOARD_HTML)
 
 
 @server.get("/health")
@@ -58,6 +65,7 @@ async def add_request_id(request: Request, call_next):
 
 server.include_router(review_router, prefix="/api/v1/reviews", tags=["reviews"])
 server.include_router(leaderboard_router, prefix="/api/v1/leaderboard", tags=["leaderboard"])
+server.include_router(product_router, prefix="/api/v1/products", tags=["products"])
 
 @server.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception):

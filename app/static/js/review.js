@@ -1,5 +1,5 @@
 /* ============================================================
- * Review Analyzer — ESM Module
+ * Review Analyzer — Review Page ESM Module
  * ============================================================ */
 
 // ---- DOM refs ----
@@ -15,8 +15,6 @@ const resultContent = document.getElementById("result-content");
 const toast = document.getElementById("toast");
 const toastMsg = document.getElementById("toast-message");
 const toastClose = document.getElementById("toast-close");
-const leaderboardContent = document.getElementById("leaderboard-content");
-const leaderboardRefreshBtn = document.getElementById("leaderboard-refresh-btn");
 
 // ---- State helpers ----
 function setLoading(loading) {
@@ -38,7 +36,6 @@ function hideToast() {
 
 toastClose.addEventListener("click", hideToast);
 
-// Auto-hide toast after 5 s
 function autoHideToast() {
   setTimeout(hideToast, 5000);
 }
@@ -65,10 +62,8 @@ function renderResult(data) {
     signals,
   } = analysis_result;
 
-  // Mood badge class
   const moodClass = mood.toLowerCase();
 
-  // Signals HTML
   const signalsHtml =
     signals && signals.length > 0
       ? `<div class="signals-list">
@@ -82,7 +77,7 @@ function renderResult(data) {
         <span>✅</span> ${escapeHtml(message)}
       </div>
 
-      <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:0.5rem;">
+      <div class="result-mood-row">
         <span>Mood:</span>
         <span class="result-mood ${moodClass}">${escapeHtml(mood)}</span>
       </div>
@@ -192,8 +187,6 @@ form.addEventListener("submit", async (e) => {
       translation || undefined,
     );
     renderResult(data);
-    // Refresh leaderboard after a successful review submission
-    loadLeaderboard();
   } catch (err) {
     showToast(err.message || "An unexpected error occurred.");
     autoHideToast();
@@ -202,157 +195,11 @@ form.addEventListener("submit", async (e) => {
   }
 });
 
-// ---- Reset result when form changes (optional UX) ----
-// If user starts editing, hide the old result to avoid confusion
+// ---- Reset result when form changes ----
 function onFormChange() {
   resultSection.classList.remove("visible");
 }
 textInput.addEventListener("input", onFormChange);
 productInput.addEventListener("input", onFormChange);
-
-// ============================================================
-//  Leaderboard
-// ============================================================
-
-// ---- Fetch leaderboard ----
-async function fetchLeaderboard(limit = 10) {
-  const response = await fetch(`/api/v1/leaderboard/?limit=${limit}`);
-  if (!response.ok) {
-    let detail = `Server error (${response.status})`;
-    try {
-      const err = await response.json();
-      if (err.detail) detail = err.detail;
-    } catch (_) { /* use default */ }
-    throw new Error(detail);
-  }
-  return response.json();
-}
-
-// ---- Render leaderboard ----
-function getMedal(rank) {
-  if (rank === 1) return '<span class="rank-medal">🥇</span>';
-  if (rank === 2) return '<span class="rank-medal">🥈</span>';
-  if (rank === 3) return '<span class="rank-medal">🥉</span>';
-  return rank;
-}
-
-function getScoreClass(score) {
-  if (score > 0) return "score-positive";
-  if (score < 0) return "score-negative";
-  return "score-zero";
-}
-
-function getScorePrefix(score) {
-  return score > 0 ? "+" : "";
-}
-
-function renderLeaderboard(data) {
-  const { leaderboard } = data;
-
-  if (!leaderboard || leaderboard.length === 0) {
-    leaderboardContent.innerHTML = `
-      <div class="leaderboard-empty">
-        <div class="icon">📭</div>
-        <p>No reviews yet. Be the first to submit one!</p>
-      </div>
-    `;
-    return;
-  }
-
-  const rowsHtml = leaderboard
-    .map(
-      (entry, i) => `
-        <tr>
-          <td class="col-rank">${getMedal(i + 1)}</td>
-          <td>${escapeHtml(entry.product_name)}</td>
-          <td class="col-score ${getScoreClass(entry.total_score)}">
-            ${getScorePrefix(entry.total_score)}${entry.total_score}
-          </td>
-        </tr>
-      `,
-    )
-    .join("");
-
-  leaderboardContent.innerHTML = `
-    <table class="leaderboard-table">
-      <thead>
-        <tr>
-          <th class="col-rank">#</th>
-          <th>Product</th>
-          <th class="col-score">Score</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${rowsHtml}
-      </tbody>
-    </table>
-  `;
-}
-
-function renderLeaderboardError(message) {
-  leaderboardContent.innerHTML = `
-    <div class="leaderboard-error">
-      ⚠️ ${escapeHtml(message)}
-    </div>
-  `;
-}
-
-function renderLeaderboardLoading() {
-  leaderboardContent.innerHTML = `
-    <div class="leaderboard-loading">
-      <span class="spinner spinner-dark"></span>
-      Loading leaderboard…
-    </div>
-  `;
-}
-
-// ---- Load leaderboard ----
-async function loadLeaderboard(silent = false) {
-  if (!silent) {
-    renderLeaderboardLoading();
-  }
-  try {
-    const data = await fetchLeaderboard(10);
-    renderLeaderboard(data);
-  } catch (err) {
-    if (!silent) {
-      renderLeaderboardError(err.message || "Failed to load leaderboard.");
-    }
-  }
-}
-
-// ============================================================
-//  Polling
-// ============================================================
-
-const POLL_INTERVAL = 30_000;
-let pollingTimerId = null;
-
-function startPolling() {
-  stopPolling();
-  pollingTimerId = setInterval(() => {
-    loadLeaderboard(true);
-  }, POLL_INTERVAL);
-}
-
-function stopPolling() {
-  if (pollingTimerId !== null) {
-    clearInterval(pollingTimerId);
-    pollingTimerId = null;
-  }
-}
-
-// ---- Refresh button ----
-leaderboardRefreshBtn.addEventListener("click", () => {
-  loadLeaderboard();
-  startPolling();
-});
-
-// ---- Clean up on page unload ----
-window.addEventListener("beforeunload", stopPolling);
-
-// ---- Initial load and start polling ----
-loadLeaderboard();
-startPolling();
 
 console.log("Review Analyzer loaded ✓");

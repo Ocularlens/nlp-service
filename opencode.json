@@ -47,6 +47,16 @@
         "edit": "deny",
         "bash": "allow"
       }
+    },
+    "documenter": {
+      "description": "Updates AGENTS.md only when architecture changes occur. Read-only — never edits application code. Runs as a subagent delegated by the commander agent.",
+      "mode": "subagent",
+      "model": "opencode/big-pickle",
+      "permission": {
+        "read": "allow",
+        "edit": "deny",
+        "bash": "deny"
+      }
     }
   }
 }

@@ -11,6 +11,10 @@
     <header>
       <div class="container">
         <h1>Review Analyzer</h1>
+        <nav class="page-nav">
+          <a href="/" class="nav-link active">✍️ Review</a>
+          <a href="/leaderboard" class="nav-link">🏆 Leaderboard</a>
+        </nav>
         <span class="badge">NLP Service</span>
       </div>
     </header>
@@ -94,27 +98,6 @@
         </form>
       </section>
 
-      <!-- ===== Leaderboard Card ===== -->
-      <section class="card" id="leaderboard-section" aria-live="polite">
-        <div class="leaderboard-header">
-          <h2>🏆 Product Leaderboard</h2>
-          <button
-            class="btn btn-secondary btn-sm"
-            id="leaderboard-refresh-btn"
-            type="button"
-          >
-            🔄 Refresh
-          </button>
-        </div>
-
-        <div id="leaderboard-content">
-          <div class="leaderboard-loading">
-            <span class="spinner spinner-dark"></span>
-            Loading leaderboard…
-          </div>
-        </div>
-      </section>
-
       <!-- ===== Result Card ===== -->
       <section class="card" id="result-section" aria-live="polite">
         <h2>📊 Analysis Result</h2>
@@ -133,6 +116,6 @@
       </button>
     </div>
 
-    <script type="module" src="/static/js/main.js"></script>
+    <script type="module" src="/static/js/review.js"></script>
   </body>
 </html>

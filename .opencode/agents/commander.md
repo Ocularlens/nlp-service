@@ -31,7 +31,11 @@ After implementation, delegate to `@tester` to write missing tests and run the t
 
 After tests pass, delegate to `@reviewer` to review the diff against project conventions.
 
-### 5. Summary
+### 5. documenter
+
+After review pass, delegate to `@documenter` to document if there are any changes in the architecture.
+
+### 6. Summary
 
 Present a final summary to the user: what was changed, test results, and any issues flagged by the reviewer.
 
