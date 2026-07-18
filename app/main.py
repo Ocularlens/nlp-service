@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request, status
 from fastapi.responses import FileResponse, JSONResponse
-from app.routes import review_router
+from fastapi.staticfiles import StaticFiles
+from app.routes import review_router, leaderboard_router
 from app.utils import logger, limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi import _rate_limit_exceeded_handler
@@ -56,6 +57,7 @@ async def add_request_id(request: Request, call_next):
   return response
 
 server.include_router(review_router, prefix="/api/v1/reviews", tags=["reviews"])
+server.include_router(leaderboard_router, prefix="/api/v1/leaderboard", tags=["leaderboard"])
 
 @server.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception):
@@ -64,3 +66,6 @@ async def generic_exception_handler(request: Request, exc: Exception):
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={"message": "An unexpected error occurred. Please try again later."}
     )
+
+# Mount static files AFTER all routes so it doesn't shadow them
+server.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, Request, Query, HTTPException
 from fastapi import status as http_status
 from app.services import SpacyInteg, Translator
+from app.services.leaderboard import leaderboard_service
 from app.models import Review, Product
 from app.infra import init_db
 from sqlalchemy.orm import Session, contains_eager, joinedload
@@ -32,6 +33,15 @@ def analyze_review(request: Request, review: ReviewRequest, db: Session = Depend
         rating=result.get("sentiment_score", 0),
         mood=result.get("mood", "neutral")
     )
+
+    # Update Redis leaderboard (failures should not block review creation)
+    try:
+        leaderboard_service.update_score(
+            review.productName,
+            result.get("sentiment_score", 0)
+        )
+    except Exception as e:
+        logger.error(f"{request.state.request_id} - Failed to update leaderboard for {review.productName}: {e}")
 
     return {
         "message": "Review successfully analyzed and stored",
