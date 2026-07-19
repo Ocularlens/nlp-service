@@ -1,10 +1,11 @@
 """
 Leaderboard service using Redis Sorted Sets to rank products by review sentiment.
 """
-import os
 import logging
 
 import redis
+
+from app.infra.redis import redis_client as _infra_redis_client
 
 LEADERBOARD_KEY = "product_leaderboard"
 
@@ -20,20 +21,10 @@ class LeaderboardService:
 
     def __init__(self, redis_client=None):
         """Initialize with an optional Redis client (for test injection).
-        If no client is provided, creates one from REDIS_URL env var.
+        If no client is provided, uses the shared redis_client from app.infra.
         """
-        self.redis = redis_client
+        self.redis = redis_client if redis_client is not None else _infra_redis_client
         self.key = LEADERBOARD_KEY
-        if self.redis is None:
-            redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
-            try:
-                self.redis = redis.from_url(redis_url)
-            except Exception as e:
-                logger.warning(
-                    f"Leaderboard unavailable: could not connect to Redis "
-                    f"at {redis_url}: {e}"
-                )
-                self.redis = None
 
     def _available(self) -> bool:
         """Check if the Redis client is available."""

@@ -18,7 +18,7 @@ uvicorn app.main:server --reload --host 0.0.0.0 --port 8000
 - **Testing**: pytest 8.x with FastAPI TestClient; 102 tests covering routes, services, repositories
 - **Python 3.11** (Docker uses `python:3.11-slim`)
 - **Dependencies listed in `requirements.txt`** only — no `pyproject.toml` or `setup.py`
-- **.env is gitignored** — `DATABASE_URL` and `REDIS_URL` required at runtime; loaded via `python-dotenv`
+- **.env is gitignored** — `DATABASE_URL` and `REDIS_URL` required at runtime; `REDIS_URL` is centralized in `app/infra/redis.py` (also loaded via `python-dotenv`)
 - **Frontend** at `app/static/index.html` served on `GET /` — single-page app that submits reviews to `POST /api/v1/reviews/`
 
 ## Architecture
@@ -27,14 +27,14 @@ uvicorn app.main:server --reload --host 0.0.0.0 --port 8000
 
 | Layer        | Key exports                                     |
 |---|---|
-| `infra`      | `database`, `init_db` (DB session generator), `Base` (declarative base) |
+| `infra`      | `database`, `init_db` (DB session generator), `Base` (declarative base), `redis_client` (Redis singleton from `REDIS_URL` env var), `REDIS_URL` |
 | `models`     | `Review` (aliased from `ReviewModel`) — table `reviews`, PK is `review_id` (UUID string, 64 chars) |
 | `schema`     | `ReviewRequest`, `ReviewResponse` — Pydantic models (`text`, `productName`, optional `translation`) |
-| `services`   | `SpacyInteg` (sentiment), `Translator` (Google Translate via `deep-translator`) |
+| `services`   | `SpacyInteg` (sentiment), `Translator` (Google Translate via `deep-translator`), `LeaderboardService` (Redis sorted-set ranking via `app.infra.redis`) |
 | `repository` | `BaseRepository`, `ReviewRepository`, `ProductRepository` — wraps SQLAlchemy session |
 | `routes`     | `review_router`, `leaderboard_router`, `product_router` — see endpoint listing below |
 | `static`     | `index.html` — single-page frontend app (plain HTML/CSS/JS with ESM module pattern) |
-| `utils`      | `logger` (uvicorn access logger), `limiter` (slowapi, backed by Redis), `generate_unique_id` (uuid4) |
+| `utils`      | `logger` (uvicorn access logger), `limiter` (slowapi, backed by Redis via `app.infra.redis`), `generate_unique_id` (uuid4) |
 
 ### Key patterns
 
